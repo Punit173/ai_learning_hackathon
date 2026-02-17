@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Upload, FileText, BookOpen, CheckCircle, Loader2, File as FileIcon, Zap, Search, Grid, List } from 'lucide-react';
 import { parsePDF, parsePPTX } from '@/lib/parsers';
-import SelectionModal from '../components/SelectionModal';
+import SelectionModal from '@/components/SelectionModal';
 
 export default function HomePage() {
   const [isProcessing, setIsProcessing] = useState(false);

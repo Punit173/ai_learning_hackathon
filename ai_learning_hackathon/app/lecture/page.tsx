@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Mic, Send, MessageSquare, ChevronLeft, ChevronRight, BookOpen, Loader2, MicOff, Volume2, Radio, User, Terminal, ArrowLeft } from 'lucide-react';
-import { SummaryResponse, summarizeText } from '@/services/lecture_api';
-import Link from 'next/link';
+import React, { useState, useEffect, useRef } from "react";
+import { Volume2, MicOff, Loader2, ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
+import { summarizeText } from "@/services/lecture_api";
+import Link from "next/link";
+import ChatPanel from "@/components/Chatpanel"; // ← Split file
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Page {
@@ -11,14 +12,9 @@ interface Page {
   text: string;
 }
 
-interface CachedChunk {
+interface CachedChunk { 
   resp: string;
   images: string[];
-}
-
-interface Message {
-  role: 'ai' | 'user';
-  text: string;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -31,7 +27,6 @@ function getPagesFromStorage(): Page[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
-
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed.pages) ? parsed.pages : [];
   } catch {
@@ -51,9 +46,118 @@ function getCacheFromStorage(): Record<number, CachedChunk> {
 function saveCacheToStorage(cache: Record<number, CachedChunk>) {
   try {
     localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
-  } catch { }
+  } catch {}
 }
 
+// ─── ImageCarousel ────────────────────────────────────────────────────────────
+const ImageCarousel: React.FC<{ images: string[] }> = ({ images }) => {
+  const [idx, setIdx] = useState(0);
+  const [animating, setAnimating] = useState(false);
+  const [direction, setDirection] = useState<"left" | "right">("right");
+
+  // Auto-advance every 4 s
+  useEffect(() => {
+    if (images.length <= 1) return;
+    const t = setInterval(() => slide("right"), 4000);
+    return () => clearInterval(t);
+  }, [images.length, idx]);
+
+  const slide = (dir: "left" | "right") => {
+    if (animating) return;
+    setDirection(dir);
+    setAnimating(true);
+    setTimeout(() => {
+      setIdx((prev) =>
+        dir === "right"
+          ? (prev + 1) % images.length
+          : (prev - 1 + images.length) % images.length
+      );
+      setAnimating(false);
+    }, 280);
+  };
+
+  return (
+    <div className="bg-white border-4 border-black p-4 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b-4 border-black pb-2 mb-4">
+        <h3 className="font-black uppercase">Visual Data</h3>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-black uppercase text-gray-400">
+            {idx + 1} / {images.length}
+          </span>
+          <div className="bg-black text-white text-xs px-2 font-bold">{images.length}</div>
+        </div>
+      </div>
+
+      {/* Carousel stage */}
+      <div className="relative overflow-hidden">
+        {/* Pin decoration */}
+        <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center">
+          <div className="w-4 h-4 bg-red-600 rounded-full border-2 border-black shadow-sm"></div>
+          <div className="w-0.5 h-3 bg-black"></div>
+        </div>
+
+        {/* Image */}
+        <div
+          className="relative group mt-4"
+          style={{
+            opacity: animating ? 0 : 1,
+            transform: animating
+              ? `translateX(${direction === "right" ? "-12px" : "12px"})`
+              : "translateX(0)",
+            transition: "opacity 0.28s ease, transform 0.28s ease",
+          }}
+        >
+          <div className="bg-white p-2 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transform rotate-1 group-hover:rotate-0 transition-transform">
+            <img
+              src={images[idx]}
+              alt={`Fig ${idx + 1}`}
+              className="w-full h-auto grayscale group-hover:grayscale-0 transition-all"
+            />
+          </div>
+          <div className="absolute bottom-[-10px] right-[-5px] bg-yellow-400 border-2 border-black px-2 text-[10px] font-bold uppercase transform -rotate-3 z-10">
+            Fig. 0{idx + 1}
+          </div>
+        </div>
+
+        {/* Prev / Next arrows */}
+        {images.length > 1 && (
+          <div className="flex justify-between mt-6 gap-2">
+            <button
+              onClick={() => slide("left")}
+              className="flex-1 flex items-center justify-center gap-1 py-1.5 border-2 border-black bg-white text-black text-[10px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all"
+            >
+              <ChevronLeft size={13} /> Prev
+            </button>
+            <button
+              onClick={() => slide("right")}
+              className="flex-1 flex items-center justify-center gap-1 py-1.5 border-2 border-black bg-white text-black text-[10px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all"
+            >
+              Next <ChevronRight size={13} />
+            </button>
+          </div>
+        )}
+
+        {/* Dot indicators */}
+        {images.length > 1 && (
+          <div className="flex justify-center gap-1.5 mt-3">
+            {images.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => { setDirection(i > idx ? "right" : "left"); setIdx(i); }}
+                className={`w-2 h-2 rounded-full border-2 border-black transition-all ${
+                  i === idx ? "bg-black scale-125" : "bg-gray-300"
+                }`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── Component ────────────────────────────────────────────────────────────────
 const Lecture: React.FC = () => {
   const [allPages, setAllPages] = useState<Page[]>([]);
 
@@ -74,17 +178,17 @@ const Lecture: React.FC = () => {
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const [question, setQuestion] = useState("");
-  const [messages, setMessages] = useState<Message[]>([
-    { role: 'ai', text: "SYSTEM READY. AWAITING QUERY." }
-  ]);
-  const chatEndRef = useRef<HTMLDivElement>(null);
+  // ── Current page metadata ─────────────────────────────────────────────────
+  const currentPages = allPages.slice(
+    chunkIndex * PAGES_PER_CHUNK,
+    chunkIndex * PAGES_PER_CHUNK + PAGES_PER_CHUNK
+  );
+  const pageLabel = currentPages.length
+    ? `Pages ${currentPages[0].page}–${currentPages[currentPages.length - 1].page}`
+    : `Chunk ${chunkIndex + 1}`;
+  const currentPageText = currentPages.map((p) => p.text).join("\n\n");
 
-  // ── Fetch or serve from cache ──────────────────────────
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
+  // ── Reset speech on chunk change ─────────────────────────────────────────
   useEffect(() => {
     window.speechSynthesis.cancel();
     setIsSpeaking(false);
@@ -92,6 +196,7 @@ const Lecture: React.FC = () => {
     videoRef.current?.pause();
   }, [chunkIndex]);
 
+  // ── Load chunk (cached or fresh) ─────────────────────────────────────────
   useEffect(() => {
     const loadChunk = async () => {
       if (cache[chunkIndex]) {
@@ -102,7 +207,7 @@ const Lecture: React.FC = () => {
       if (allPages.length === 0) {
         setContent({
           resp: "NO DATA FOUND.\n\nUPLOAD PDF TO INITIALIZE LECTURE PROTOCOL.",
-          images: []
+          images: [],
         });
         return;
       }
@@ -111,7 +216,9 @@ const Lecture: React.FC = () => {
         chunkIndex * PAGES_PER_CHUNK,
         chunkIndex * PAGES_PER_CHUNK + PAGES_PER_CHUNK
       );
-      const combinedText = slice.map(p => `[Page ${p.page}]\n${p.text}`).join("\n\n---\n\n");
+      const combinedText = slice
+        .map((p) => `[Page ${p.page}]\n${p.text}`)
+        .join("\n\n---\n\n");
 
       setLoading(true);
       setError(null);
@@ -134,31 +241,10 @@ const Lecture: React.FC = () => {
   }, [chunkIndex, allPages, cache]);
 
   // ── Navigation ────────────────────────────────────────────────────────────
-  const goNext = () => setChunkIndex(i => Math.min(i + 1, totalChunks - 1));
-  const goPrev = () => setChunkIndex(i => Math.max(i - 1, 0));
+  const goNext = () => setChunkIndex((i) => Math.min(i + 1, totalChunks - 1));
+  const goPrev = () => setChunkIndex((i) => Math.max(i - 1, 0));
 
-  const currentPages = allPages.slice(
-    chunkIndex * PAGES_PER_CHUNK,
-    chunkIndex * PAGES_PER_CHUNK + PAGES_PER_CHUNK
-  );
-  const pageLabel = currentPages.length
-    ? `Pages ${currentPages[0].page}–${currentPages[currentPages.length - 1].page}`
-    : `Chunk ${chunkIndex + 1}`;
-
-  // ── Chat ──────────────────────────────────────────────────────────────────
-  const handleSend = () => {
-    if (!question.trim()) return;
-    setMessages(prev => [...prev, { role: 'user', text: question }]);
-    setQuestion("");
-    setTimeout(() => {
-      setMessages(prev => [...prev, {
-        role: 'ai',
-        text: "PROCESSING INPUT... RELATING TO SECTION -> " + pageLabel + ". STANDBY."
-      }]);
-    }, 900);
-  };
-
-  // ── TTS ────────────────────────────────────────────────────────────────
+  // ── TTS ───────────────────────────────────────────────────────────────────
   const handleSpeak = () => {
     if (!content.resp) return;
     window.speechSynthesis.cancel();
@@ -170,8 +256,16 @@ const Lecture: React.FC = () => {
       const wordCount = spoken.trim().split(/\s+/).length - 1;
       setWordIndex(wordCount);
     };
-    utterance.onend = () => { setIsSpeaking(false); setWordIndex(-1); videoRef.current?.pause(); };
-    utterance.onerror = () => { setIsSpeaking(false); setWordIndex(-1); videoRef.current?.pause(); };
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      setWordIndex(-1);
+      videoRef.current?.pause();
+    };
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      setWordIndex(-1);
+      videoRef.current?.pause();
+    };
 
     setIsSpeaking(true);
     window.speechSynthesis.speak(utterance);
@@ -188,16 +282,23 @@ const Lecture: React.FC = () => {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#fffdf5] text-black font-mono p-4 sm:p-8 flex flex-col items-center overflow-x-hidden">
-
       <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Gochi+Hand&display=swap');
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        @import url("https://fonts.googleapis.com/css2?family=Gochi+Hand&display=swap");
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #e2e8f0;
+          border-radius: 10px;
+        }
       `}</style>
 
-      {/* Header */}
+      {/* ── Header ── */}
       <div className="w-full max-w-[1600px] mb-8 flex justify-between items-center bg-white border-4 border-black p-4 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-        <Link href="/home" className="flex items-center gap-2 font-bold hover:underline decoration-2">
+        <Link
+          href="/home"
+          className="flex items-center gap-2 font-bold hover:underline decoration-2"
+        >
           <ArrowLeft className="w-5 h-5" />
           RETURN
         </Link>
@@ -215,9 +316,8 @@ const Lecture: React.FC = () => {
 
       <div className="w-full max-w-[1800px] grid grid-cols-12 gap-8 items-start">
 
-        {/* ── Left Column: Video Tutor ── */}
+        {/* ── Left Column: Video Tutor + Images ── */}
         <div className="col-span-3 flex flex-col gap-6">
-
           {/* Instructor Card */}
           <div className="bg-white border-4 border-black p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-center relative">
             <div className="w-full aspect-video border-4 border-black mb-4 bg-black overflow-hidden relative shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
@@ -230,7 +330,9 @@ const Lecture: React.FC = () => {
                 className="w-96 h-full mt-2 opacity-80"
               />
               <div className="absolute inset-0 bg-green-500/10 pointer-events-none"></div>
-              <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-black uppercase px-2 py-0.5 animate-pulse">LIVE</div>
+              <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-black uppercase px-2 py-0.5 animate-pulse">
+                LIVE
+              </div>
             </div>
 
             <div className="flex items-center justify-between mb-2">
@@ -241,55 +343,32 @@ const Lecture: React.FC = () => {
                 <div className="w-2 h-2 bg-black rounded-full"></div>
               </div>
             </div>
-            <p className="text-xs font-bold uppercase text-gray-500 border-t-2 border-black pt-2 text-left">Active Instructor</p>
+            <p className="text-xs font-bold uppercase text-gray-500 border-t-2 border-black pt-2 text-left">
+              Active Instructor
+            </p>
 
             <button
               onClick={isSpeaking ? handleStopSpeak : handleSpeak}
               disabled={loading || !content.resp}
-              className={`w-full mt-4 flex items-center justify-center gap-2 px-4 py-3 border-4 border-black font-black uppercase shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all ${isSpeaking ? 'bg-red-500 text-white' : 'bg-green-400 text-black'
-                }`}
+              className={`w-full mt-4 flex items-center justify-center gap-2 px-4 py-3 border-4 border-black font-black uppercase shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all ${
+                isSpeaking ? "bg-red-500 text-white" : "bg-green-400 text-black"
+              }`}
             >
               {isSpeaking ? <MicOff size={20} /> : <Volume2 size={20} />}
-              {isSpeaking ? 'Term. Audio' : 'Init. Audio'}
+              {isSpeaking ? "Term. Audio" : "Init. Audio"}
             </button>
           </div>
 
-          {/* Visual Data (Moved from Right) */}
+          {/* Visual Data — Carousel */}
           {content.images && content.images.length > 0 && (
-            <div className="bg-white border-4 border-black p-4 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-              <div className="flex items-center justify-between border-b-4 border-black pb-2 mb-4">
-                <h3 className="font-black uppercase">Visual Data</h3>
-                <div className="bg-black text-white text-xs px-2 font-bold">{content.images.length}</div>
-              </div>
-              <div className="flex flex-col gap-6 p-2">
-                {content.images.map((imgUrl, index) => (
-                  <div key={index} className="relative group overflow-visible">
-                    {/* The Pin */}
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
-                      <div className="w-4 h-4 bg-red-600 rounded-full border-2 border-black shadow-sm"></div>
-                      <div className="w-0.5 h-3 bg-black mx-auto"></div>
-                    </div>
-
-                    {/* The Image */}
-                    <div className="bg-white p-2 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transform rotate-1 group-hover:rotate-0 transition-transform">
-                      <img src={imgUrl} alt={`Fig ${index}`} className="w-full h-auto grayscale group-hover:grayscale-0 transition-all" />
-                    </div>
-                    <div className="absolute bottom-[-10px] right-[-5px] bg-yellow-400 border-2 border-black px-2 text-[10px] font-bold uppercase transform -rotate-3 z-10">
-                      Fig. 0{index + 1}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <ImageCarousel images={content.images} />
           )}
-
         </div>
 
         {/* ── Center: Greenboard ── */}
         <div className="col-span-6 flex flex-col gap-6">
           <div className="relative min-h-[750px] w-full bg-[#1e3932] rounded-[2rem] border-[12px] border-[#3e2723] shadow-[12px_12px_0px_0px_rgba(0,0,0,0.8)] flex flex-col overflow-hidden">
-
-            {/* Chalkboard Texture Overlay */}
+            {/* Chalkboard Texture */}
             <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/chalkboard.png')] pointer-events-none"></div>
 
             {/* Board Header */}
@@ -306,22 +385,28 @@ const Lecture: React.FC = () => {
             </div>
 
             <div className="relative flex-1 p-8 sm:px-12 flex flex-col font-mono z-10">
-              {/* Loading state */}
+              {/* Loading */}
               {loading && (
                 <div className="flex-1 flex flex-col items-center justify-center gap-4">
                   <Loader2 size={40} className="text-white animate-spin" />
-                  <p className="text-white font-bold uppercase tracking-widest animate-pulse">Decorrelating Data...</p>
+                  <p className="text-white font-bold uppercase tracking-widest animate-pulse">
+                    Decorrelating Data...
+                  </p>
                 </div>
               )}
 
-              {/* Error state */}
+              {/* Error */}
               {!loading && error && (
                 <div className="flex-1 flex flex-col items-center justify-center gap-3">
                   <div className="bg-red-500 text-white p-4 border-4 border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
                     <p className="font-bold uppercase">System Error: {error}</p>
                   </div>
                   <button
-                    onClick={() => { const tmp = chunkIndex; setChunkIndex(-1); setTimeout(() => setChunkIndex(tmp), 50); }}
+                    onClick={() => {
+                      const tmp = chunkIndex;
+                      setChunkIndex(-1);
+                      setTimeout(() => setChunkIndex(tmp), 50);
+                    }}
                     className="mt-2 px-4 py-2 bg-white text-black font-bold uppercase hover:bg-gray-200"
                   >
                     Retry Protocol
@@ -336,38 +421,46 @@ const Lecture: React.FC = () => {
                   className="text-xl md:text-2xl leading-relaxed whitespace-pre-wrap overflow-y-auto pr-4 custom-scrollbar text-white/90"
                   style={{
                     fontFamily: '"Gochi Hand", cursive',
-                    maxHeight: '550px',
-                    textShadow: '1px 1px 2px rgba(0,0,0,0.5)'
+                    maxHeight: "550px",
+                    textShadow: "1px 1px 2px rgba(0,0,0,0.5)",
                   }}
                 >
                   {content.resp ? (
                     content.resp.split(/(\s+)/).map((token, i) => {
                       const isWord = token.trim().length > 0;
-                      const wordPos = content.resp.split(/(\s+)/).slice(0, i).filter(t => t.trim()).length;
+                      const wordPos = content.resp
+                        .split(/(\s+)/)
+                        .slice(0, i)
+                        .filter((t) => t.trim()).length;
                       return (
                         <span
                           key={i}
-                          style={isWord && wordPos === wordIndex ? {
-                            backgroundColor: 'rgba(255,221,0,0.4)',
-                            borderRadius: '4px',
-                            padding: '0 2px',
-                            boxShadow: '0 0 10px rgba(255,221,0,0.2)'
-                          } : {}}
+                          style={
+                            isWord && wordPos === wordIndex
+                              ? {
+                                  backgroundColor: "rgba(255,221,0,0.4)",
+                                  borderRadius: "4px",
+                                  padding: "0 2px",
+                                  boxShadow: "0 0 10px rgba(255,221,0,0.2)",
+                                }
+                              : {}
+                          }
                         >
                           {token}
                         </span>
                       );
                     })
                   ) : (
-                    <span className="text-white/40 italic">... NO DATA STREAM ...</span>
+                    <span className="text-white/40 italic">
+                      ... NO DATA STREAM ...
+                    </span>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Chalk Tray / Bottom Controls */}
+            {/* Chalk Tray / Nav */}
             <div className="mt-auto bg-[#2d1b18] p-4 flex justify-between items-center relative shadow-inner border-t-[8px] border-[#3e2723]">
-              {/* Chalks */}
               <div className="absolute -top-3 left-12 flex gap-2">
                 <div className="w-12 h-2 bg-white rounded-sm shadow-sm transform -rotate-2"></div>
                 <div className="w-8 h-2 bg-blue-200 rounded-sm shadow-sm transform rotate-6"></div>
@@ -381,11 +474,9 @@ const Lecture: React.FC = () => {
                 >
                   Prev Slide
                 </button>
-
                 <span className="text-[#8d6e63] text-xs font-bold uppercase tracking-widest inset-x-0 mx-auto absolute text-center pointer-events-none">
                   Interactive Board v2.0
                 </span>
-
                 <button
                   onClick={goNext}
                   disabled={chunkIndex === totalChunks - 1 || loading}
@@ -398,51 +489,10 @@ const Lecture: React.FC = () => {
           </div>
         </div>
 
-        {/* ── Right Column: Doubt Box ── */}
+        {/* ── Right Column: Chat Panel (split component) ── */}
         <div className="col-span-3 flex flex-col gap-6">
-
-          <div className="h-[600px] flex flex-col bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-            <div className="bg-pink-500 border-b-4 border-black p-3 flex items-center justify-between">
-              <span className="font-black uppercase text-white">Direct Line</span>
-              <MessageSquare className="text-white" size={20} />
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-              {messages.map((msg, i) => (
-                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[90%] p-3 border-2 border-black text-xs font-bold ${msg.role === 'user'
-                    ? 'bg-blue-300 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
-                    : 'bg-white text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
-                    }`}>
-                    {msg.text}
-                  </div>
-                </div>
-              ))}
-              <div ref={chatEndRef} />
-            </div>
-
-            <div className="p-4 border-t-4 border-black bg-white">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  className="w-full bg-white border-2 border-black p-2 text-xs font-bold placeholder-gray-400 focus:outline-none focus:bg-yellow-50"
-                  placeholder="INPUT QUERY..."
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
-                />
-                <button
-                  onClick={handleSend}
-                  className="bg-black text-white p-2 border-2 border-black hover:bg-gray-800"
-                >
-                  <Send size={16} />
-                </button>
-              </div>
-            </div>
-          </div>
-
+          <ChatPanel pageLabel={pageLabel} currentPageText={currentPageText} />
         </div>
-
       </div>
     </div>
   );

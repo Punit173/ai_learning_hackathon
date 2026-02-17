@@ -35,3 +35,18 @@ def search_youtube_videos(topics: list[str], limit_per_topic: int = 1):
             print("YT search error:", e)
 
     return results
+
+
+
+def get_thumbnail_from_url(url: str):
+    try:
+        video_id = url.split("v=")[-1].split("&")[0]
+        return f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
+    except Exception:
+        return None
+
+
+def attach_thumbnails(videos: list[dict]):
+    for video in videos:
+        video["thumbnail"] = get_thumbnail_from_url(video["url"])
+    return videos
