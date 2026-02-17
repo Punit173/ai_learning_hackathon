@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from models import DialogueRequest, DialogueResponse
 from dialogue_generator import generate_dialogue
+from audio_generator import generate_audio_from_dialogue
+from fastapi.responses import Response
 
 # ---------------------------------------------------------------------------
 # App
@@ -55,3 +57,25 @@ async def create_dialogue(request: DialogueRequest):
             status_code=500,
             detail=f"An unexpected error occurred: {exc}",
         )
+@app.post("/generate-audio")
+async def generate_audio_endpoint(request: DialogueRequest):
+    """
+    Accepts raw text, generates a dialogue, and then converts it to audio
+    using Gemini 2.5 Pro TTS (preview).
+    Returns a WAV file.
+    """
+    # 1. Generate Dialogue (Reuse existing logic)
+    dialogue_turns = await generate_dialogue(request.text)
+    
+    # 2. Generate Audio
+    try:
+        audio_bytes = await generate_audio_from_dialogue(dialogue_turns)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    # 3. Return Audio File
+    return Response(
+        content=audio_bytes, 
+        media_type="audio/mpeg",
+        headers={"Content-Disposition": "attachment; filename=dialogue.mp3"}
+    )
