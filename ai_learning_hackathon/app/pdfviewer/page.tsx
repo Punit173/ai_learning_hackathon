@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, PenTool, Eraser, ZoomIn, ZoomOut, MessageSquare, X, Send, Sparkles, ArrowLeft } from 'lucide-react';
+import { ChevronLeft, ChevronRight, PenTool, Eraser, ZoomIn, ZoomOut, MessageSquare, X, Send, Sparkles, ArrowLeft, BookOpenText } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
+import { useRouter } from "next/navigation";
+
 import { createClient } from '@/utils/supabase/client';
 
 export default function PDFViewerPage() {
@@ -19,6 +21,8 @@ export default function PDFViewerPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const annotationLayerRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const router=useRouter();
   
   // Drawing state
   const [isDrawing, setIsDrawing] = useState(false);
@@ -364,6 +368,13 @@ export default function PDFViewerPage() {
                         <span className="hidden sm:inline">Ask AI</span>
                      </button>
                  )}
+                    <button 
+                        onClick={() => {router.push('/lecture')}}
+                        className="ml-2 bg-black text-white p-2 px-4 rounded-xl shadow-lg hover:shadow-indigo-500/25 transition-all flex items-center gap-2 text-sm font-bold"
+                    >
+                        <BookOpenText className="w-4 h-4" />
+                        <span className="hidden sm:inline">AI Lecture</span>
+                    </button>
              </div>
              
              {/* Spacer for symmetry */}

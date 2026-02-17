@@ -15,6 +15,8 @@ def simplify_topic(topic: str) -> str:
 
 def fetch_images(topics: list[str], per_topic: int = 2) -> list[str]:
     images = []
+    # Define allowed extensions
+    valid_extensions = ('.jpg', '.jpeg', '.png')
 
     for topic in topics:
         try:
@@ -23,35 +25,34 @@ def fetch_images(topics: list[str], per_topic: int = 2) -> list[str]:
             params = {
                 "action": "query",
                 "generator": "search",
-                "gsrsearch": topic,
+                # Adding 'filetype:bitmap' helps narrow results to images in search
+                "gsrsearch": f"{topic} filetype:bitmap", 
                 "gsrnamespace": 6,
-                "gsrlimit": per_topic,
+                "gsrlimit": per_topic * 2, # Fetch more to account for filtered items
                 "prop": "imageinfo",
                 "iiprop": "url",
                 "format": "json",
             }
 
-            r = requests.get(
-                WIKI_API,
-                params=params,
-                headers=HEADERS,
-                timeout=10
-            )
-
-            if r.status_code != 200:
-                print("Wikimedia HTTP error:", r.status_code)
-                continue
+            r = requests.get(WIKI_API, params=params, headers=HEADERS, timeout=10)
+            if r.status_code != 200: continue
 
             data = r.json()
-
             pages = data.get("query", {}).get("pages", {})
 
             for page in pages.values():
                 info = page.get("imageinfo")
                 if info:
-                    images.append(info[0]["url"])
+                    url = info[0]["url"]
+                    # Filter: Only append if the URL ends with a valid image extension
+                    if url.lower().endswith(valid_extensions):
+                        images.append(url)
+                
+                # Stop if we've reached the desired count for this specific topic
+                if len(images) >= per_topic:
+                    break
 
         except Exception as e:
             print("Image fetch error:", str(e))
 
-    return images
+    return images[:len(topics) * per_topic] # Final trim to match requested count
