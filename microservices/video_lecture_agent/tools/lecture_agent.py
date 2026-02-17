@@ -15,7 +15,7 @@ async def generate_summary(text: str) -> dict:
 
     try:
         response = client.models.generate_content(
-            model="gemini-2.5-flash-lite",
+            model="gemini-3-flash-preview",
             contents=prompt,
             config={"response_mime_type": "application/json"},
         )
