@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, PenTool, Eraser, ZoomIn, ZoomOut, MessageSquare, X, Send, Sparkles, ArrowLeft, BookOpenText } from 'lucide-react';
+import { ChevronLeft, ChevronRight, PenTool, Eraser, ZoomIn, ZoomOut, MessageSquare, X, Send, Sparkles, ArrowLeft, BookOpenText, Mic2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import { useRouter } from "next/navigation";
@@ -134,11 +134,22 @@ export default function PDFViewerPage() {
   }, [currentPage, numPages]);
 
   // Render Page
+  const renderTaskRef = useRef<any>(null);
+
   useEffect(() => {
     if (!pdfDoc || !canvasRef.current) return;
 
     const renderPage = async () => {
       try {
+        // Cancel previous render if it exists
+        if (renderTaskRef.current) {
+            try {
+                await renderTaskRef.current.cancel();
+            } catch (ignore) {
+                // Expected error on cancel
+            }
+        }
+
         const page = await pdfDoc.getPage(currentPage);
         const viewport = page.getViewport({ scale });
         
@@ -153,19 +164,32 @@ export default function PDFViewerPage() {
           canvasContext: context,
           viewport: viewport,
         };
-        await page.render(renderContext as any).promise;
+        
+        const renderTask = page.render(renderContext as any);
+        renderTaskRef.current = renderTask;
+
+        await renderTask.promise;
+        renderTaskRef.current = null;
 
         if (annotationLayerRef.current) {
             annotationLayerRef.current.height = viewport.height;
             annotationLayerRef.current.width = viewport.width;
             redrawAnnotations();
         }
-      } catch (err) {
-        console.error("Render error:", err);
+      } catch (err: any) {
+        if (err?.name !== 'RenderingCancelledException') {
+            console.error("Render error:", err);
+        }
       }
     };
 
     renderPage();
+    
+    return () => {
+        if (renderTaskRef.current) {
+            renderTaskRef.current.cancel();
+        }
+    };
   }, [pdfDoc, currentPage, scale, annotations]);
 
   // Redraw Annotations
@@ -371,9 +395,18 @@ export default function PDFViewerPage() {
                     <button 
                         onClick={() => {router.push('/lecture')}}
                         className="ml-2 bg-black text-white p-2 px-4 rounded-xl shadow-lg hover:shadow-indigo-500/25 transition-all flex items-center gap-2 text-sm font-bold"
+                        title="AI Video Lecture"
                     >
                         <BookOpenText className="w-4 h-4" />
                         <span className="hidden sm:inline">AI Lecture</span>
+                    </button>
+                    <button 
+                        onClick={() => {router.push('/podcast')}}
+                        className="ml-2 bg-rose-600 text-white p-2 px-4 rounded-xl shadow-lg hover:shadow-rose-500/25 transition-all flex items-center gap-2 text-sm font-bold"
+                        title="Generate Podcast"
+                    >
+                        <Mic2 className="w-4 h-4" />
+                        <span className="hidden sm:inline">Podcast</span>
                     </button>
              </div>
              

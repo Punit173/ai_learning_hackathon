@@ -3,11 +3,14 @@
 import React, { useState } from 'react';
 import { Upload, FileText, BookOpen, CheckCircle, Loader2, File as FileIcon } from 'lucide-react';
 import { parsePDF, parsePPTX } from '@/lib/parsers';
+import SelectionModal from '../components/SelectionModal';
 
 export default function HomePage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'upload' | 'standard'>('upload');
+  const [showModal, setShowModal] = useState(false);
+  const [uploadedFileName, setUploadedFileName] = useState("");
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -55,6 +58,12 @@ export default function HomePage() {
       setStatusMessage(`Error: ${error.message}`);
     } finally {
       setIsProcessing(false);
+    }
+    
+    // Show Modal if successful
+    if (file) {
+        setUploadedFileName(file.name);
+        setShowModal(true);
     }
   };
 
@@ -205,6 +214,12 @@ export default function HomePage() {
           </button>
         </div>
       )}
+
+      <SelectionModal 
+        isOpen={showModal} 
+        onClose={() => setShowModal(false)} 
+        fileName={uploadedFileName} 
+      />
     </div>
   );
 }
