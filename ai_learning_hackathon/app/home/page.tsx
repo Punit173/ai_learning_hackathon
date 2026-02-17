@@ -83,21 +83,21 @@ export default function HomePage() {
              <div 
                 className={`absolute top-1 bottom-1 rounded-full bg-white shadow-sm transition-all duration-300 ease-in-out`}
                 style={{
-                    left: activeTab === 'upload' ? '4px' : '50%',
+                    left: '4px',
                     width: 'calc(50% - 4px)',
-                    transform: activeTab === 'standard' ? 'translateX(0)' : 'translateX(0)' 
+                    transform: activeTab === 'standard' ? 'translateX(100%)' : 'translateX(0)' 
                 }}
              />
              
             <button 
                 onClick={() => setActiveTab('upload')}
-                className={`relative z-10 px-8 py-2 rounded-full text-sm font-medium transition-colors duration-300 ${activeTab === 'upload' ? 'text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                className={`relative z-10 w-32 sm:w-48 py-2 rounded-full text-sm font-medium transition-colors duration-300 text-center ${activeTab === 'upload' ? 'text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
             >
                 Upload
             </button>
             <button 
                 onClick={() => setActiveTab('standard')}
-                className={`relative z-10 px-8 py-2 rounded-full text-sm font-medium transition-colors duration-300 ${activeTab === 'standard' ? 'text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                className={`relative z-10 w-32 sm:w-48 py-2 rounded-full text-sm font-medium transition-colors duration-300 text-center ${activeTab === 'standard' ? 'text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
             >
                 Standard Material
             </button>
@@ -137,43 +137,49 @@ export default function HomePage() {
         )}
 
         {/* Section 2: Predefined Cards */}
+        {/* Section 2: Predefined Cards (Netflix Style) */}
         {activeTab === 'standard' && (
-        <section className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="bg-purple-50 p-3 rounded-2xl">
-              <BookOpen className="w-8 h-8 text-purple-600" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-800">Standard Material</h2>
+        <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex items-center gap-2 mb-6 px-2">
+            <h2 className="text-xl font-bold text-gray-800">Popular Subjects</h2>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Card 
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <MovieCard 
               title="Class 11th Physics" 
-              description="Kinematics & Laws of Motion"
+              subject="Physics"
+              description="Kinematics & Laws of Motion. Master the fundamentals of mechanics."
+              image="https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?q=80&w=1000&auto=format&fit=crop"
               onClick={() => handlePredefinedCardClick("Class 11th Physics", [
                 { page: 1, text: "Chapter 1: Physical World" },
                 { page: 2, text: "Chapter 2: Units and Measurements" }
               ])}
             />
-            <Card 
+            <MovieCard 
               title="Class 12th Chemistry" 
-              description="Solutions & Electrochemistry"
+              subject="Chemistry"
+              description="Solutions & Electrochemistry. Dive deep into molecular interactions."
+              image="https://images.unsplash.com/photo-1532094349884-543bc11b234d?q=80&w=1000&auto=format&fit=crop"
               onClick={() => handlePredefinedCardClick("Class 12th Chemistry", [
                 { page: 1, text: "Chapter 1: Solutions" },
                 { page: 2, text: "Chapter 2: Electrochemistry" }
               ])}
             />
-            <Card 
+            <MovieCard 
               title="JEE Advanced" 
-              description="Previous Year Questions"
+              subject="Competitive"
+              description="Previous Year Questions. Rigorous practice for the toughest exams."
+              image="https://images.unsplash.com/photo-1635070041078-e363dbe005cb?q=80&w=1000&auto=format&fit=crop"
               onClick={() => handlePredefinedCardClick("JEE Advanced Mock", [
                 { page: 1, text: "Question 1: ..." },
                 { page: 2, text: "Question 2: ..." }
               ])}
             />
-             <Card 
+             <MovieCard 
               title="Biology NEET" 
-              description="Human Physiology"
+              subject="Biology"
+              description="Human Physiology. Understanding the complexity of life systems."
+              image="https://images.unsplash.com/photo-1530210124550-912dc1381cb8?q=80&w=1000&auto=format&fit=crop"
               onClick={() => handlePredefinedCardClick("Biology NEET", [
                 { page: 1, text: "Digestion and Absorption" },
                 { page: 2, text: "Breathing and Exchange of Gases" }
@@ -186,7 +192,7 @@ export default function HomePage() {
       </div>
 
       {statusMessage && (
-        <div className="fixed bottom-8 right-8 bg-gray-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4 animate-in slide-in-from-bottom-5 fade-in duration-300">
+        <div className="fixed bottom-8 right-8 bg-gray-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4 animate-in slide-in-from-bottom-5 fade-in duration-300 z-50">
           <CheckCircle className="text-green-400 w-6 h-6" />
           <p className="font-medium">{statusMessage}</p>
           <button onClick={() => setStatusMessage(null)} className="ml-4 text-gray-400 hover:text-white">
@@ -198,17 +204,44 @@ export default function HomePage() {
   );
 }
 
-function Card({ title, description, onClick }: { title: string, description: string, onClick: () => void }) {
+function MovieCard({ title, subject, description, image, onClick }: { title: string, subject: string, description: string, image: string, onClick: () => void }) {
   return (
     <button 
       onClick={onClick}
-      className="text-left w-full p-5 rounded-2xl border border-gray-100 bg-gray-50 hover:bg-white hover:border-purple-200 hover:shadow-md transition-all group"
+      className="relative group w-full aspect-video rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:scale-[1.03] focus:outline-none"
     >
-      <div className="flex items-start justify-between mb-2">
-        <FileIcon className="w-8 h-8 text-gray-400 group-hover:text-purple-500 transition-colors" />
+      {/* Background Image */}
+      <img src={image} alt={title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+      
+      {/* Dark Overlay Gradient */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90 group-hover:opacity-80 transition-opacity duration-500" />
+
+      {/* Content */}
+      <div className="absolute inset-0 p-6 flex flex-col justify-end text-left">
+         <div className="transform transition-transform duration-500 group-hover:-translate-y-2">
+            <div className="flex items-center gap-2 mb-3">
+                <span className="inline-block px-2 py-1 text-[10px] font-bold tracking-widest text-white uppercase bg-red-600/90 rounded-sm shadow-sm">
+                    {subject}
+                </span>
+            </div>
+            <h3 className="text-2xl font-extrabold text-white leading-tight drop-shadow-lg mb-1 font-sans">
+                {title}
+            </h3>
+             
+            {/* Description Reveal */}
+            <div className="h-0 overflow-hidden group-hover:h-auto opacity-0 group-hover:opacity-100 transition-all duration-500 ease-out">
+                <p className="text-gray-200 text-xs mt-3 line-clamp-2 leading-relaxed font-medium max-w-[90%]">
+                    {description}
+                </p>
+                <div className="mt-4 flex items-center gap-3 text-white text-sm font-bold">
+                    <div className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center shadow-lg hover:bg-gray-200 transition-colors">
+                        <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 ml-0.5"><path d="M8 5v14l11-7z" /></svg>
+                    </div>
+                    <span className="drop-shadow-md">Start Learning</span>
+                </div>
+            </div>
+         </div>
       </div>
-      <h3 className="font-bold text-gray-900 mb-1">{title}</h3>
-      <p className="text-xs text-gray-500">{description}</p>
     </button>
   );
 }
