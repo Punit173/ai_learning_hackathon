@@ -137,7 +137,7 @@ export default function PDFViewerPage() {
     useEffect(() => {
         if (!pdfDoc || !canvasRef.current) return;
 
-        let renderTask: { cancel: () => void } | null = null;
+        let renderTask: { cancel: () => void; promise: Promise<any> } | null = null;
 
         const renderPage = async () => {
             try {
